@@ -264,7 +264,7 @@ where
             let event_handler = event_handler.clone();
 
             move |ctx, _, (offset,): (i64,)| {
-                let abs_offset = offset.abs() as u64;
+                let abs_offset = offset.unsigned_abs();
                 let direction = if offset > 0 {
                     SeekDirection::Forward
                 } else {
