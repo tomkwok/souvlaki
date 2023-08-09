@@ -421,5 +421,7 @@ async fn run_service(
         }
     }
 
+    connection.release_name(name).await.ok();
+
     Ok(())
 }
