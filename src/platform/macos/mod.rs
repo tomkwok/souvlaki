@@ -16,7 +16,7 @@ use cocoa::{
 };
 use core_graphics::geometry::CGSize;
 use dispatch::{Queue, QueuePriority};
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel, sel_impl, runtime::Class};
 
 use crate::{MediaControlEvent, MediaMetadata, MediaPlayback, PlatformConfig, MediaPosition};
 
@@ -25,12 +25,17 @@ use crate::{MediaControlEvent, MediaMetadata, MediaPlayback, PlatformConfig, Med
 pub struct Error;
 
 /// A handle to OS media controls.
-pub struct MediaControls;
+pub struct MediaControls {
+    enabled: bool,
+}
+
 
 impl MediaControls {
     /// Create media controls with the specified config.
     pub fn new(_config: PlatformConfig) -> Result<Self, Error> {
-        Ok(Self)
+        Ok(Self {
+            enabled: Class::get("MPRemoteCommandCenter").is_some(),
+        })
     }
 
     /// Attach the media control events to a handler.
@@ -38,25 +43,33 @@ impl MediaControls {
     where
         F: Fn(MediaControlEvent) + Send + 'static,
     {
-        unsafe { attach_command_handlers(Arc::new(event_handler)) };
+        if self.enabled {
+            unsafe { attach_command_handlers(Arc::new(event_handler)) };
+        }
         Ok(())
     }
 
     /// Detach the event handler.
     pub fn detach(&mut self) -> Result<(), Error> {
-        unsafe { detach_command_handlers() };
+        if self.enabled {
+            unsafe { detach_command_handlers() };
+        }
         Ok(())
     }
 
     /// Set the current playback status.
     pub fn set_playback(&mut self, playback: MediaPlayback) -> Result<(), Error> {
-        unsafe { set_playback_status(playback) };
+        if self.enabled {
+            unsafe { set_playback_status(playback) };
+        }
         Ok(())
     }
 
     /// Set the metadata of the currently playing media item.
     pub fn set_metadata(&mut self, metadata: MediaMetadata) -> Result<(), Error> {
-        unsafe { set_playback_metadata(metadata) };
+        if self.enabled {
+            unsafe { set_playback_metadata(metadata) };
+        }
         Ok(())
     }
 }
