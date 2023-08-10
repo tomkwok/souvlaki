@@ -15,24 +15,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        arch: [x86_64, aarch64]
+        rust: [stable]
+    env:
+      target: >
+        ${{ format('{0}-{1}', matrix.arch, fromJSON('{
+          "ubuntu-latest": "unknown-linux-gnu",
+          "macOS-latest": "apple-darwin",
+          "windows-latest": "pc-windows-msvc"
+          }')[matrix.os]) }}
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+
+    - name: Install rust toolchain
+      uses: dtolnay/rust-toolchain@master
       with:
-        profile: minimal
-        toolchain: stable
-    - uses: Swatinem/rust-cache@v1
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libdbus-1-dev pkg-config
-      if: ${{ runner.os == 'Linux' }}
-    - name: Build
-      run: cargo build --release --all-targets --verbose
-    - name: Build zbus
+        toolchain: ${{ matrix.rust }}
+        targets: ${{ env.target }}
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Run cargo build
+      run: cargo build --release --target ${{ env.target }}
+      if: ${{ runner.os != 'Linux' }}
+
+    - name: Run cargo build (zbus)
       run: cargo build --release --all-targets --verbose --no-default-features --features=use_zbus
+      if: ${{ runner.os == 'Linux' && matrix.arch == 'x86_64' }}
+
+    - name: Run cross build
+      run: |
+        cargo install cross
+        cross build --release --target ${{ env.target }}
       if: ${{ runner.os == 'Linux' }}
