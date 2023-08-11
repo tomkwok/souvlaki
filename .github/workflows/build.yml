@@ -50,5 +50,6 @@ jobs:
     - name: Run cross build
       run: |
         cargo install cross
+        cross rustc --version --target ${{ env.target }}
         cross build --release --target ${{ env.target }}
       if: ${{ runner.os == 'Linux' }}
